@@ -347,10 +347,115 @@ function ThemeToggleButton3(props) {
 }
 
 // Consume multiple context demo
+const ThemeContext4 = React.createContext('light');
+const UserContext4 = React.createContext('Guest');
 
+class App4 extends React.Component {
+  render() {
+    return (
+      <ThemeContext4.Provider value="dark">
+        <UserContext4.Provider value="Admin">
+          <Content4 />
+        </UserContext4.Provider>
+      </ThemeContext4.Provider>
+    )
+  }
+}
+function Content4(props) {
+  return (
+    <ThemeContext4.Consumer>
+      {theme => (
+        <UserContext4.Consumer>
+          {role => (
+            <div>theme: {theme}, user role: {role}</div>
+          )}
+        </UserContext4.Consumer>
+      )}
+    </ThemeContext4.Consumer>
+  )
+}
+
+// Nested context test demo
+const MyContext0 = React.createContext('lv0');
+class App5 extends React.Component {
+  static contextType = MyContext0;
+
+  render() {
+    return (
+      <div>
+        {this.context}
+        <MyContext0.Provider value="lv1">
+          <MyContext0.Consumer>
+            {x => {
+              return (
+                <div style={{marginLeft: "20px"}}>
+                  {x}
+                  <MyContext0.Provider value="lv2">
+                    <MyContext0.Consumer>
+                      {y => {
+                        return (
+                          <div style={{marginLeft: "20px"}}>
+                            {y}
+                          </div>
+                        )
+                      }}
+                    </MyContext0.Consumer>
+                  </MyContext0.Provider>
+                </div>
+              )
+            }}
+          </MyContext0.Consumer>
+        </MyContext0.Provider>
+      </div>
+    )
+  }
+}
+
+// Context Attentions Demo
+const MyContext1 = React.createContext("foo");
+
+setInterval(() => {
+  MyContext1.Provider = React.createContext("foo").Provider;
+}, 1000)
+
+class MyContext1Consumer extends React.Component {
+  static contextType = MyContext1;
+
+  render() {
+    console.log(this.props.msg);
+    return (
+      <div>{this.context.toString()}</div>
+    )
+  }
+}
+
+class App6 extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {}
+  }
+
+  render() {
+    return (
+      <div>
+        <MyContext1.Provider value={{}}>
+          <MyContext1Consumer
+            msg="this consumer will get rendered periodically since the context value is always a new value"
+          />
+        </MyContext1.Provider>
+        
+        <MyContext1.Provider value={this.state}>
+          <MyContext1Consumer
+            msg="this consumer will only get rendered once"
+          />
+        </MyContext1.Provider>
+      </div>
+    )
+  }
+}
 
 ReactDOM.render(
-  <div>
+  <div className="root-el">
     <FunctionalComponent name="zan" />
     <ClassComponent name="qwq" />
     <Clock />
@@ -365,6 +470,9 @@ ReactDOM.render(
     <App1 />
     <App2 />
     <App3 />
+    <App4 />
+    <App5 />
+    <App6 />
   </div>,
   document.getElementById('root')
 )
