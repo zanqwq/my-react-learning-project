@@ -411,47 +411,142 @@ class App5 extends React.Component {
   }
 }
 
-// Context Attentions Demo
-const MyContext1 = React.createContext("foo");
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { err: null, errInfo: null };
+  }
 
-setInterval(() => {
-  MyContext1.Provider = React.createContext("foo").Provider;
-}, 1000)
-
-class MyContext1Consumer extends React.Component {
-  static contextType = MyContext1;
+  componentDidCatch(err, errInfo) {
+    console.log(err, errInfo);
+    this.setState({ err, errInfo })
+  }
 
   render() {
-    console.log(this.props.msg);
-    return (
-      <div>{this.context.toString()}</div>
-    )
+    if (this.state.err) {
+      return (
+        <div>
+          <h2>Something went wrong</h2>
+          <details style={{whiteSpace: 'pre-wrap'}}>
+            {this.state.err && this.state.err.toString()}
+            <br />
+            {this.state.errInfo.componentStack}
+          </details>
+        </div>
+      )
+    }
+    // if no err, then render it's children
+    return this.props.children;
+  }
+}
+
+class BuggyCounter extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { counter: 0 };
+    this.handleClick = this.handleClick.bind(this);
+  }
+
+  handleClick(e) {
+    this.setState(({ counter }) => ({ counter: counter + 1 }));
+  }
+
+  render() {
+    if (this.state.counter === 5) {
+      throw new Error("我裂开了");
+    }
+    return <button onClick={this.handleClick}>{this.state.counter}</button>
   }
 }
 
 class App6 extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {}
-  }
-
   render() {
     return (
       <div>
-        <MyContext1.Provider value={{}}>
-          <MyContext1Consumer
-            msg="this consumer will get rendered periodically since the context value is always a new value"
-          />
-        </MyContext1.Provider>
-        
-        <MyContext1.Provider value={this.state}>
-          <MyContext1Consumer
-            msg="this consumer will only get rendered once"
-          />
-        </MyContext1.Provider>
+        <p>This is an example of error boundaries in React 16</p>
+        <br />
+        <p>click on the button to increase counter</p>
+        <hr />
+        <ErrorBoundary>
+          <p>These two counters are inside the same error boundary. If one crashes, the error boundary will replace both of them</p>
+          <BuggyCounter />
+          <BuggyCounter />
+        </ErrorBoundary>
+        <hr />
+        <p>These two counters are each inside of their own error boundary. So if one crashed, the other one is not affected</p>
+        <ErrorBoundary>
+          <BuggyCounter />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <BuggyCounter />
+        </ErrorBoundary>
       </div>
     )
   }
+}
+
+class FragmentDemo extends React.Component {
+  render() {
+    return (
+      <div>
+        <h1>Invalid html structure of table cause by root div : </h1>
+        <table>
+          <tr>
+            <ColumnsDiv />
+          </tr>
+        </table>
+        <hr />
+        <h1>Using React.Fragment :</h1>
+        <table>
+          <tr>
+            <ColumnsFragment />
+          </tr>
+        </table>
+        <hr />
+        <h1>Using React.Fragment shorthand : </h1>
+        <table>
+          <ColumnsFragmentShorthand />
+        </table>
+        <hr />
+        <h1>Using React.Fragment with key : </h1>
+        <dl>
+          {this.props.items.map(item => (
+            <React.Fragment key={item.id}>
+              <dt>{item.term}</dt>
+              <dd>{item.definition}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    )
+  }
+}
+
+function ColumnsDiv(props) {
+  return (
+    <div>
+      <td>foo</td>
+      <td>bar</td>
+    </div>
+  )
+}
+
+function ColumnsFragment(props) {
+  return (
+    <React.Fragment>
+      <td>foo</td>
+      <td>bar</td>
+    </React.Fragment>
+  )
+}
+
+function ColumnsFragmentShorthand(props) {
+  return (
+    <>
+      <td>foo</td>
+      <td>bar</td>
+    </>
+  )
 }
 
 ReactDOM.render(
@@ -473,6 +568,10 @@ ReactDOM.render(
     <App4 />
     <App5 />
     <App6 />
+    <FragmentDemo items={[
+      { id: 0, term: "foo", definition: "foo is foo" },
+      { id: 1, term: "bar", definition: "bar is bar" }
+    ]} />
   </div>,
   document.getElementById('root')
 )
