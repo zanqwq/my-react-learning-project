@@ -1666,16 +1666,6 @@ React 不需要错误边界捕获事件处理器的错误, 因为它的设计意
 
 
 
-### TODO Refs 转发
-
-Ref 转发是将 ref 自动通过组件传递到其一子组件的技巧.
-
-
-
-#### 转发 refs 到 DOM 组件
-
-
-
 ### Fragments
 
 React 常见模式是一个组件返回多个元素. Fragments 允许将子列表分组, 而无需向 DOM 添加额外节点
@@ -1778,28 +1768,6 @@ function Glossary(props) {
 ```
 
 > 目前 : `key` 是唯一可以传给 `Fragment` 的属性
-
-
-
-### 高阶组件
-
-高阶组件 (High-Order-Component —— HOC) 是 React 中用于复用组件逻辑的高级技巧. HOC 自身不是 React API 的一部分, 它是基于 React 的组合特性而形成的设计模式.
-
-具体来说, **HOC 是以组件为参数, 返回值为新组件的函数**
-
-```jsx
-const EnhancedComponent = higherOrderComponent(WrappedComponent);
-```
-
-组件是将 `props` 等数据转化成 UI, 而 HOC 将组件转化为另一个组件.
-
-HOC 在 React 第三方库很常见, 例如 Redux 的 `connect`
-
-本章讨论高阶组件为什么有用, 以及如何编写自己的 HOC 函数
-
-
-
-#### 使用 HOC 解决横切关注点问题
 
 
 
@@ -2034,7 +2002,7 @@ JSX 标签的第一部分指定了 React 元素类型.
   >
   > 以上代码在 length 为 `0` 时仍然会渲染出 `0`, 要解决这个问题, 确保 `&&` 左边为 boolean, 修改左边为 `props.message.length > 0`
   >
-  > 反之, 如果想渲染 `false`, `null` 等值, 需要线转换为字符串.
+  > 反之, 如果想渲染 `false`, `null` 等值, 需要先转换为字符串.
 
 
 
@@ -2111,19 +2079,286 @@ UI 更新需要昂贵的 DOM 操作, React 使用几种巧妙技术最小化 DOM
 
 ### Portals
 
+Portal 提供一种将子节点渲染到父组件外的 DOM 节点的方案
 
+```jsx
+ReactDOM.createPortal(child, container);
+```
+
+
+
+#### 用法
+
+通常组件 `render` 返回元素时, 该元素将挂载到 DOM 节点中离它最近的父节点
+
+然而有时候需要将子元素插入到不同的位置, 例如, 父组件有 `overflow: hidden` 或 `z-index` 样式时, 需要子组件能够在视觉上跳出容器, 如对话框等.
+
+```jsx
+render() {
+  // React 挂载了一个新的 div，并且把子元素渲染其中
+  return (
+    <div>
+      {this.props.children}
+    </div>
+  );
+}
+
+render() {
+  // React 并*没有*创建一个新的 div。它只是把子元素渲染到 `domNode` 中。
+  // `domNode` 是一个可以在任何位置的有效 DOM 节点。
+  return ReactDOM.createPortal(
+    this.props.children,
+    domNode
+  );
+}
+```
+
+> 用 portal 时, 键盘焦点管理尤为重要
+
+例子 : 
+
+```html
+<div id="app-root"></div>
+<div id="modal-root"></div>
+```
+
+```css
+#modal-root {
+  position: relative;
+  z-index: 999;
+}
+
+.app {
+  height: 10em;
+  width: 10em;
+  background: lightblue;
+  overflow: hidden;
+}
+
+.modal {
+  background-color: rgba(0,0,0,0.5);
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+```jsx
+// These two containers are siblings in the DOM
+const appRoot = document.getElementById('app-root');
+const modalRoot = document.getElementById('modal-root');
+
+// Let's create a Modal component that is an abstraction around
+// the portal API.
+class Modal extends React.Component {
+  constructor(props) {
+    super(props);
+    // Create a div that we'll render the modal into. Because each
+    // Modal component has its own element, we can render multiple
+    // modal components into the modal container.
+    this.el = document.createElement('div');
+  }
+
+  componentDidMount() {
+    // Append the element into the DOM on mount. We'll render
+    // into the modal container element (see the HTML tab).
+    modalRoot.appendChild(this.el);
+  }
+
+  componentWillUnmount() {
+    // Remove the element from the DOM when we unmount
+    modalRoot.removeChild(this.el);
+  }
+  
+  render() {
+    // Use a portal to render the children into the element
+    return ReactDOM.createPortal(
+      // Any valid React child: JSX, strings, arrays, etc.
+      this.props.children,
+      // A DOM element
+      this.el,
+    );
+  }
+}
+
+// The Modal component is a normal React component, so we can
+// render it wherever we like without needing to know that it's
+// implemented with portals.
+class App extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {showModal: false};
+    
+    this.handleShow = this.handleShow.bind(this);
+    this.handleHide = this.handleHide.bind(this);
+  }
+
+  handleShow() {
+    this.setState({showModal: true});
+  }
+  
+  handleHide() {
+    this.setState({showModal: false});
+  }
+
+  render() {
+    // Show a Modal on click.
+    // (In a real app, don't forget to use ARIA attributes
+    // for accessibility!)
+    const modal = this.state.showModal ? (
+      <Modal>
+        <div className="modal">
+          <div>
+            With a portal, we can render content into a different
+            part of the DOM, as if it were any other React child.
+          </div>
+          This is being rendered inside the #modal-container div.
+          <button onClick={this.handleHide}>Hide modal</button>
+        </div>
+      </Modal>
+    ) : null;
+
+    return (
+      <div className="app">
+        This div has overflow: hidden.
+        <button onClick={this.handleShow}>Show modal</button>
+        {modal}
+      </div>
+    );
+  }
+}
+
+ReactDOM.render(<App />, appRoot);
+```
+
+
+
+#### 通过 Portal 进行事件冒泡
+
+尽管 portal 可以被放置在 DOM 树任意地方, 但在其他方面, 其行为和普通 React 子节点行为一致. 由于 portal 仍存在于 React 树中, 且于实际 DOM 树中位置无关, 那么无论其子节点是否为 mortal, 像 context 这样的功能特性不变.
+
+这也包含事件冒泡, 即使实际 DOM 中不为一个子节点, 但只要在 React 树中, 那么其父节点就会受到事件冒泡的影响.
 
 
 
 ### Profiler
 
+`Profiler` 测量渲染一个 React 应用多久渲染一次以及渲染一次的"代价". 它的目的是识别出应用中渲染较慢的部分, 或是可以使用[类似 memoization 优化](https://zh-hans.reactjs.org/docs/hooks-faq.html#how-to-memoize-calculations)的部分, 并从相关优化中获益
+
+用法 : 用 React 内置的 `Profiler` 组件来嵌套需要监测的组件, 它需要 `id` 和 `onRender` 两个属性
+
+* `id: string`
+* `onRender: (id: string, phase: "mount" | "update", actualDuration: number, baseDuration: number, startTime: number, commitTime: number, interactions: Set) => void`
+  * `id` 发生提交的 `Profiler` 树的 `id`. 如果有多个 profiler, 用于分辨树的哪一部分发生了 "提交"
+  * `phase` 判断是组件树的第一次装载引起的重渲染, 是由 `props`, `state` 或是 hooks 引起的冲渲染.
+  * `actualDuration` 本次更新在渲染 `Profiler` 和它的子代上花费的时间.
+  * `baseDuration` 在 `Profiler` 树中最近一次每个组件 `render` 的持续时间.
+
+
+
+### 不用 ES6
+
+如果不使用 ES 6 语法, 可以引入 `create-react-class` 模块 : 
+
+```jsx
+const createReactClass = require("create-react-class");
+const Welcome = createReactClass({
+    render: function() {
+        return <h1>Hello, {this.props.name}</h1>
+    }
+})
+```
+
+这和 ES6 class 很类似, 但有以下几点值得注意
+
+* 声明默认 props
+
+  无论是 class 还是函数组件都有 `defaultProps` 属性
+
+  ```jsx
+  class Foo extends React.Component {
+      // ...
+  }
+  Foo.defaultProps = { name: "zan" };
+  
+  function Bar {
+      // ...
+  }
+  Bar.defaultProps = { name: "zan" };
+  ```
+
+  如果使用 `createReactClass` 则需要在组件中定义 `getDefaultProps` 函数
+
+  ```jsx
+  const Foo = createReactClass({
+      getDefaultProps: function() {
+          return { name: "zan" };
+      }
+  });
+  ```
+
+* 初始化 State
+
+  需要定义 `getInitialState` 函数
+
+  ```jsx
+  const Foo = createReactClass({
+      getInitialState() {
+          return { name: "zan" };
+      }
+  });
+  ```
+
+* 自动绑定
+
+  `createReactClass` 创建的组件方法自动绑定 `this`. 然而这需要额外的性能消耗
+
+
+
+### 不使用 JSX
+
+`React.createElement(component, props, ...children)`
+
 
 
 ### 协调
 
+当组件的 props 或 state 发生变化时，React 通过将最新返回的元素与原先渲染的元素进行比较，来决定是否有必要进行一次实际的 DOM 更新。当它们不相等时，React 才会更新 DOM。这个过程被称为“协调”，其算法称之为 "diffing" 算法
+
+---
 
 
-### Refs & DOM
+
+
+
+### Refs & DOM & Refs 转发
+
+
+
+### 高阶组件
+
+高阶组件 (High-Order-Component —— HOC) 是 React 中用于复用组件逻辑的高级技巧. HOC 自身不是 React API 的一部分, 它是基于 React 的组合特性而形成的设计模式.
+
+具体来说, **HOC 是以组件为参数, 返回值为新组件的函数**
+
+```jsx
+const EnhancedComponent = higherOrderComponent(WrappedComponent);
+```
+
+组件是将 `props` 等数据转化成 UI, 而 HOC 将组件转化为另一个组件.
+
+HOC 在 React 第三方库很常见, 例如 Redux 的 `connect`
+
+本章讨论高阶组件为什么有用, 以及如何编写自己的 HOC 函数
+
+
+
+#### 使用 HOC 解决横切关注点问题
 
 
 
@@ -2150,6 +2385,12 @@ UI 更新需要昂贵的 DOM 操作, React 使用几种巧妙技术最小化 DOM
 ## API Reference
 
 ### React
+
+
+
+#### React.Component
+
+
 
 
 

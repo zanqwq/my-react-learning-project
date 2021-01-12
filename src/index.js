@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Profiler } from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 // import App from './App';
@@ -411,6 +411,7 @@ class App5 extends React.Component {
   }
 }
 
+// Error Boundary Demo
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -549,6 +550,25 @@ function ColumnsFragmentShorthand(props) {
   )
 }
 
+class ProfilerDemo extends React.Component {
+  constructor(props) {
+    super(props);
+    this.onRender = this.onRender.bind(this);
+  }
+
+  onRender(id, phase, actualDuration, baseDuration, startTime, commitTime, interactions) {
+    console.log(id, phase, actualDuration, baseDuration, startTime, commitTime, interactions);
+  }
+
+  render() {
+    return (
+      <Profiler id="profiler" onRender={this.onRender}>
+        <App6 />
+      </Profiler>
+    )
+  }
+}
+
 ReactDOM.render(
   <div className="root-el">
     <FunctionalComponent name="zan" />
@@ -572,6 +592,7 @@ ReactDOM.render(
       { id: 0, term: "foo", definition: "foo is foo" },
       { id: 1, term: "bar", definition: "bar is bar" }
     ]} />
+    <ProfilerDemo />
   </div>,
   document.getElementById('root')
 )
