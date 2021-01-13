@@ -1,8 +1,8 @@
-import React, { Profiler } from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
+import React, { Profiler } from "react";
+import ReactDOM from "react-dom";
+import "./index.css";
 // import App from './App';
-import reportWebVitals from './reportWebVitals';
+import reportWebVitals from "./reportWebVitals";
 
 // ReactDOM.render(
 //   <React.StrictMode>
@@ -12,12 +12,12 @@ import reportWebVitals from './reportWebVitals';
 // );
 
 function FunctionalComponent(props) {
-  return <h1>Hello, {props.name}, I'm a functional component</h1>
+  return <h1>Hello, {props.name}, I'm a functional component</h1>;
 }
 
 class ClassComponent extends React.Component {
   render() {
-    return <h1>Hello, {this.props.name}, I'm a class Component</h1>
+    return <h1>Hello, {this.props.name}, I'm a class Component</h1>;
   }
 }
 
@@ -27,7 +27,11 @@ class DownStreamTest extends React.Component {
   // }
 
   render() {
-    return <h6>DownStreamTest: this time ({this.props.time}) is passed by downstream</h6>
+    return (
+      <h6>
+        DownStreamTest: this time ({this.props.time}) is passed by downstream
+      </h6>
+    );
   }
 }
 
@@ -44,12 +48,12 @@ class Clock extends React.Component {
         <h2>It's {this.state.date.toLocaleTimeString()}</h2>
         <DownStreamTest time={this.state.date.toLocaleTimeString()} />
       </div>
-    )
+    );
   }
 
   tick() {
     const now = new Date();
-    this.setState({ date: now })
+    this.setState({ date: now });
   }
 
   componentDidMount() {
@@ -65,38 +69,35 @@ class ClassToggleButton extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      isOn: false
-    }
+      isOn: false,
+    };
     this.toggle = this.toggle.bind(this);
   }
 
   render() {
     return (
-      <button onClick={this.toggle}>
-        {this.state.isOn ? "on" : "off"}
-      </button>
-    )
+      <button onClick={this.toggle}>{this.state.isOn ? "on" : "off"}</button>
+    );
   }
 
   toggle(e) {
     console.log(e);
     this.setState((state, props) => {
-      return { isOn: !state.isOn }
-    })
+      return { isOn: !state.isOn };
+    });
   }
 }
 
 class BoilingIndicator extends React.Component {
   render() {
-    if (this.props.celsius >= 100)
-      return <p>The water would boil</p>
-    return <p>The water would not boil</p>
+    if (this.props.celsius >= 100) return <p>The water would boil</p>;
+    return <p>The water would not boil</p>;
   }
 }
 
 const scaleName = {
-  c: 'Celsius',
-  f: 'Fahrenheit'
+  c: "Celsius",
+  f: "Fahrenheit",
 };
 
 class TemperatureInput extends React.Component {
@@ -112,21 +113,21 @@ class TemperatureInput extends React.Component {
   render() {
     const temperature = this.props.temperature;
     const scale = this.props.scale;
-    return(
+    return (
       <fieldset>
         <legend>Enter temperature in {scaleName[scale]}</legend>
         <input value={temperature} onChange={this.handleChange} />
       </fieldset>
-    )
+    );
   }
 }
 
 function toCelsius(f) {
-  return (f - 32) * 5 / 9;
+  return ((f - 32) * 5) / 9;
 }
 
 function toFahrenheit(c) {
-  return (c * 9 / 5) + 32;
+  return (c * 9) / 5 + 32;
 }
 
 function tryConvert(temperature, convert) {
@@ -140,24 +141,26 @@ function tryConvert(temperature, convert) {
 class Calculator extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { temperature: '', scale: 'c' }
-    this.handleCelsiusChange = this.handleCelsiusChange.bind(this); 
+    this.state = { temperature: "", scale: "c" };
+    this.handleCelsiusChange = this.handleCelsiusChange.bind(this);
     this.handleFahrenheitChange = this.handleFahrenheitChange.bind(this);
   }
 
   handleCelsiusChange(temperature) {
-    this.setState({ scale: 'c', temperature });
+    this.setState({ scale: "c", temperature });
   }
 
   handleFahrenheitChange(temperature) {
-    this.setState({ scale: 'f', temperature });
+    this.setState({ scale: "f", temperature });
   }
 
   render() {
     const scale = this.state.scale;
     const temperature = this.state.temperature;
-    const celsius = scale === 'c' ? temperature : tryConvert(temperature, toCelsius);
-    const fahrenheit = scale === 'f' ? temperature : tryConvert(temperature, toFahrenheit);
+    const celsius =
+      scale === "c" ? temperature : tryConvert(temperature, toCelsius);
+    const fahrenheit =
+      scale === "f" ? temperature : tryConvert(temperature, toFahrenheit);
 
     return (
       <div>
@@ -173,59 +176,53 @@ class Calculator extends React.Component {
           onTemperatureChange={this.handleFahrenheitChange}
         />
 
-        <BoilingIndicator celsius={celsius}/>
+        <BoilingIndicator celsius={celsius} />
       </div>
-    )
+    );
   }
 }
 
 function SplitPane(props) {
   return (
     <div className="pane">
-      <div className="left">
-        {props.left}
-      </div>
-      <div className="right">
-        {props.right}
-      </div>
+      <div className="left">{props.left}</div>
+      <div className="right">{props.right}</div>
     </div>
   );
 }
 
 // No context Demo
 function App0(props) {
-  return (
-    <Button0 theme={props.theme} />
-  );
+  return <Button0 theme={props.theme} />;
 }
 
 function Button0(props) {
-  return <ThemeButton0 theme={props.theme}/>
+  return <ThemeButton0 theme={props.theme} />;
 }
 
 function ThemeButton0(props) {
-  return <button>{props.theme}</button>
+  return <button>{props.theme}</button>;
 }
 
 // Context Demo
-const ThemeContext1 = React.createContext('light');
+const ThemeContext1 = React.createContext("light");
 function App1(props) {
   return (
     <ThemeContext1.Provider value="dark">
       <Button1 />
     </ThemeContext1.Provider>
-  )
+  );
 }
 
 function Button1(props) {
-  return <ThemeButton1 />
+  return <ThemeButton1 />;
 }
 
 class ThemeButton1 extends React.Component {
-  static contextType = ThemeContext1
+  static contextType = ThemeContext1;
 
   render() {
-    return <button>{this.context}</button>
+    return <button>{this.context}</button>;
   }
 }
 
@@ -238,14 +235,14 @@ class ThemeButton1 extends React.Component {
 // Dynamic Context Demo
 const themes = {
   light: {
-    backgroundColor: '#fff',
-    color: "#000"
+    backgroundColor: "#fff",
+    color: "#000",
   },
   dark: {
-    backgroundColor: '#000',
-    color: "#fff"
-  }
-}
+    backgroundColor: "#000",
+    color: "#fff",
+  },
+};
 const ThemeContext2 = React.createContext(themes.light);
 
 class App2 extends React.Component {
@@ -254,13 +251,11 @@ class App2 extends React.Component {
     this.state = { theme: themes.light };
 
     this.toggleTheme = () => {
-      this.setState(state => ({
-        theme: state.theme === themes.dark
-                ? themes.light
-                : themes.dark
-      }))
+      this.setState((state) => ({
+        theme: state.theme === themes.dark ? themes.light : themes.dark,
+      }));
     };
-  };
+  }
 
   render() {
     return (
@@ -270,7 +265,7 @@ class App2 extends React.Component {
         </ThemeContext2.Provider>
         <ThemeButton2>Default theme</ThemeButton2>
       </div>
-    )
+    );
   }
 }
 
@@ -279,22 +274,16 @@ class ThemeToggleButton2 extends React.Component {
     const { props } = this;
     // 注意 : 这里的按钮文本是通过 props.children 传递给 ThemeButton2 的
     return (
-      <ThemeButton2 onClick={props.changeTheme}>
-        Toggle theme
-      </ThemeButton2>
-    )
+      <ThemeButton2 onClick={props.changeTheme}>Toggle theme</ThemeButton2>
+    );
   }
 }
 
 class ThemeButton2 extends React.Component {
   render() {
     const { props } = this;
-    const { backgroundColor, color  } = this.context;
-    return (
-      <button
-        {...props}
-        style={{backgroundColor, color}} />
-    )
+    const { backgroundColor, color } = this.context;
+    return <button {...props} style={{ backgroundColor, color }} />;
   }
 }
 ThemeButton2.contextType = ThemeContext2;
@@ -302,24 +291,22 @@ ThemeButton2.contextType = ThemeContext2;
 // Update Context in children Demo
 const ThemeContext3 = React.createContext({
   theme: themes.light,
-  toggleTheme: () => {}
+  toggleTheme: () => {},
 });
 
 class App3 extends React.Component {
   constructor(props) {
     super(props);
     this.toggleTheme = () => {
-      this.setState(state => ({
-        theme: state.theme === themes.light
-                ? themes.dark
-                : themes.light
-        }));
-      };
+      this.setState((state) => ({
+        theme: state.theme === themes.light ? themes.dark : themes.light,
+      }));
+    };
 
     this.state = {
       theme: themes.light,
-      toggleTheme: this.toggleTheme
-    }
+      toggleTheme: this.toggleTheme,
+    };
   }
 
   render() {
@@ -327,7 +314,7 @@ class App3 extends React.Component {
       <ThemeContext3.Provider value={this.state}>
         <ThemeToggleButton3 />
       </ThemeContext3.Provider>
-    )
+    );
   }
 }
 
@@ -337,18 +324,19 @@ function ThemeToggleButton3(props) {
     <ThemeContext3.Consumer>
       {({ theme, toggleTheme }) => {
         const { backgroundColor, color } = theme;
-        return <button onClick={toggleTheme}
-                       style={{backgroundColor, color}}>
-                  Toggle theme
-                </button>
+        return (
+          <button onClick={toggleTheme} style={{ backgroundColor, color }}>
+            Toggle theme
+          </button>
+        );
       }}
     </ThemeContext3.Consumer>
-  )
+  );
 }
 
 // Consume multiple context demo
-const ThemeContext4 = React.createContext('light');
-const UserContext4 = React.createContext('Guest');
+const ThemeContext4 = React.createContext("light");
+const UserContext4 = React.createContext("Guest");
 
 class App4 extends React.Component {
   render() {
@@ -358,25 +346,27 @@ class App4 extends React.Component {
           <Content4 />
         </UserContext4.Provider>
       </ThemeContext4.Provider>
-    )
+    );
   }
 }
 function Content4(props) {
   return (
     <ThemeContext4.Consumer>
-      {theme => (
+      {(theme) => (
         <UserContext4.Consumer>
-          {role => (
-            <div>theme: {theme}, user role: {role}</div>
+          {(role) => (
+            <div>
+              theme: {theme}, user role: {role}
+            </div>
           )}
         </UserContext4.Consumer>
       )}
     </ThemeContext4.Consumer>
-  )
+  );
 }
 
 // Nested context test demo
-const MyContext0 = React.createContext('lv0');
+const MyContext0 = React.createContext("lv0");
 class App5 extends React.Component {
   static contextType = MyContext0;
 
@@ -386,28 +376,24 @@ class App5 extends React.Component {
         {this.context}
         <MyContext0.Provider value="lv1">
           <MyContext0.Consumer>
-            {x => {
+            {(x) => {
               return (
-                <div style={{marginLeft: "20px"}}>
+                <div style={{ marginLeft: "20px" }}>
                   {x}
                   <MyContext0.Provider value="lv2">
                     <MyContext0.Consumer>
-                      {y => {
-                        return (
-                          <div style={{marginLeft: "20px"}}>
-                            {y}
-                          </div>
-                        )
+                      {(y) => {
+                        return <div style={{ marginLeft: "20px" }}>{y}</div>;
                       }}
                     </MyContext0.Consumer>
                   </MyContext0.Provider>
                 </div>
-              )
+              );
             }}
           </MyContext0.Consumer>
         </MyContext0.Provider>
       </div>
-    )
+    );
   }
 }
 
@@ -420,7 +406,7 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(err, errInfo) {
     console.log(err, errInfo);
-    this.setState({ err, errInfo })
+    this.setState({ err, errInfo });
   }
 
   render() {
@@ -428,13 +414,13 @@ class ErrorBoundary extends React.Component {
       return (
         <div>
           <h2>Something went wrong</h2>
-          <details style={{whiteSpace: 'pre-wrap'}}>
+          <details style={{ whiteSpace: "pre-wrap" }}>
             {this.state.err && this.state.err.toString()}
             <br />
             {this.state.errInfo.componentStack}
           </details>
         </div>
-      )
+      );
     }
     // if no err, then render it's children
     return this.props.children;
@@ -456,7 +442,7 @@ class BuggyCounter extends React.Component {
     if (this.state.counter === 5) {
       throw new Error("我裂开了");
     }
-    return <button onClick={this.handleClick}>{this.state.counter}</button>
+    return <button onClick={this.handleClick}>{this.state.counter}</button>;
   }
 }
 
@@ -469,12 +455,18 @@ class App6 extends React.Component {
         <p>click on the button to increase counter</p>
         <hr />
         <ErrorBoundary>
-          <p>These two counters are inside the same error boundary. If one crashes, the error boundary will replace both of them</p>
+          <p>
+            These two counters are inside the same error boundary. If one
+            crashes, the error boundary will replace both of them
+          </p>
           <BuggyCounter />
           <BuggyCounter />
         </ErrorBoundary>
         <hr />
-        <p>These two counters are each inside of their own error boundary. So if one crashed, the other one is not affected</p>
+        <p>
+          These two counters are each inside of their own error boundary. So if
+          one crashed, the other one is not affected
+        </p>
         <ErrorBoundary>
           <BuggyCounter />
         </ErrorBoundary>
@@ -482,7 +474,7 @@ class App6 extends React.Component {
           <BuggyCounter />
         </ErrorBoundary>
       </div>
-    )
+    );
   }
 }
 
@@ -511,7 +503,7 @@ class FragmentDemo extends React.Component {
         <hr />
         <h1>Using React.Fragment with key : </h1>
         <dl>
-          {this.props.items.map(item => (
+          {this.props.items.map((item) => (
             <React.Fragment key={item.id}>
               <dt>{item.term}</dt>
               <dd>{item.definition}</dd>
@@ -519,7 +511,7 @@ class FragmentDemo extends React.Component {
           ))}
         </dl>
       </div>
-    )
+    );
   }
 }
 
@@ -529,7 +521,7 @@ function ColumnsDiv(props) {
       <td>foo</td>
       <td>bar</td>
     </div>
-  )
+  );
 }
 
 function ColumnsFragment(props) {
@@ -538,7 +530,7 @@ function ColumnsFragment(props) {
       <td>foo</td>
       <td>bar</td>
     </React.Fragment>
-  )
+  );
 }
 
 function ColumnsFragmentShorthand(props) {
@@ -547,7 +539,7 @@ function ColumnsFragmentShorthand(props) {
       <td>foo</td>
       <td>bar</td>
     </>
-  )
+  );
 }
 
 class ProfilerDemo extends React.Component {
@@ -556,8 +548,24 @@ class ProfilerDemo extends React.Component {
     this.onRender = this.onRender.bind(this);
   }
 
-  onRender(id, phase, actualDuration, baseDuration, startTime, commitTime, interactions) {
-    console.log(id, phase, actualDuration, baseDuration, startTime, commitTime, interactions);
+  onRender(
+    id,
+    phase,
+    actualDuration,
+    baseDuration,
+    startTime,
+    commitTime,
+    interactions
+  ) {
+    console.log(
+      id,
+      phase,
+      actualDuration,
+      baseDuration,
+      startTime,
+      commitTime,
+      interactions
+    );
   }
 
   render() {
@@ -565,7 +573,260 @@ class ProfilerDemo extends React.Component {
       <Profiler id="profiler" onRender={this.onRender}>
         <App6 />
       </Profiler>
+    );
+  }
+}
+
+class Foo extends React.Component {
+  render() {
+    return <div>foo</div>
+  }
+}
+
+// Refs & DOM & Refs 转发
+class RefsDemo extends React.Component {
+  constructor(props) {
+    super(props);
+    // ref 创建
+    this.htmlRef = React.createRef();
+    this.classComponentRef = React.createRef();
+  }
+
+  componentDidMount() {
+    console.log(this.htmlRef.current instanceof HTMLElement);
+    console.log(this.classComponentRef.current);
+  }
+
+  render() {
+    return (
+      <div>
+        <div ref={this.htmlRef}>html ref demo</div>
+        <Foo ref={this.classComponentRef} />
+      </div>
+    );
+  }
+}
+
+const RefsForwardDemo = React.forwardRef((props, ref) => (
+  <button ref={ref}>
+    {props.children}
+  </button>
+))
+
+// HOC Demo
+const DataSource = {
+  comments: [
+    { id: 1, content: "comment1" },
+    { id: 2, content: "comment2" }
+  ],
+  blogPosts: [
+    { id: 1, content: "post1" },
+    { id: 2, content: "post2" }
+  ],
+  listeners: [],
+  getComments() {
+    return this.comments
+  },
+  getComment(id) {
+    this.comments.find(comment => comment.id === id);
+  },
+  getBlogPosts() {
+    return this.blogPosts;
+  },
+  getBlogPost(id) {
+    return this.blogPosts.find(blogPost => blogPost.id === id)
+  },
+  addChangeListener(listener) {
+    this.listeners.push(listener);
+  },
+  removeChangeListener(listener) {
+    const { listeners } = this;
+    const i = listeners.indexOf(listener);
+    if (i !== -1) listeners.splice(i, 0);
+  },
+  onChange() {
+    this.listeners.forEach(listener => void listener());
+  }
+}
+
+class CommentList0 extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.state = {
+      // 假设 "DataSource" 是个全局范围内的数据源变量
+      comments: DataSource.getComments()
+    };
+  }
+
+  componentDidMount() {
+    // 订阅更改
+    DataSource.addChangeListener(this.handleChange);
+  }
+
+  componentWillUnmount() {
+    // 清除订阅
+    DataSource.removeChangeListener(this.handleChange);
+  }
+
+  handleChange() {
+    // 当数据源更新时，更新组件状态
+    this.setState({
+      comments: DataSource.getComments()
+    });
+  }
+
+  render() {
+    return (
+      <div>
+        {this.state.comments.map((comment) => (
+          <Comment0 comment={comment} key={comment.id} />
+        ))}
+      </div>
+    );
+  }
+}
+function Comment0(props) {
+  return <div>{props.comment.content}</div>
+}
+class BlogPost0 extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.state = {
+      blogPost: DataSource.getBlogPost(props.id)
+    };
+  }
+
+  componentDidMount() {
+    DataSource.addChangeListener(this.handleChange);
+  }
+
+  componentWillUnmount() {
+    DataSource.removeChangeListener(this.handleChange);
+  }
+
+  handleChange() {
+    this.setState({
+      blogPost: DataSource.getBlogPost(this.props.id)
+    });
+  }
+
+  render() {
+    return <div>{this.state.blogPost.content}</div>;
+  }
+}
+
+class CommentList1 extends React.Component {
+  render() {
+    return (
+      <div>
+        {this.props.data.map(comment => (
+          <Comment1 comment={comment} key={comment.id} />
+        ))}
+      </div>
+    );
+  }
+}
+function Comment1(props) {
+  return <div>{props.comment.content}</div>
+}
+
+class BlogPost1 extends React.Component {
+  render() {
+    return <div>{this.props.data.content}</div>;
+  }
+}
+
+
+const CommentListWithSubScription = withSubscription(
+  CommentList1,
+  (DataSource) => DataSource.getComments()
+);
+const BlogPostWithSubscription = withSubscription(
+  BlogPost1,
+  (DataSource, props) => DataSource.getBlogPost(props.id)
+);
+function withSubscription(WrappedComponent, selectData) {
+  // ...并返回另一个组件...
+  return class extends React.Component {
+    constructor(props) {
+      super(props);
+      this.handleChange = this.handleChange.bind(this);
+      this.state = {
+        data: selectData(DataSource, props)
+      };
+    }
+
+    componentDidMount() {
+      // ...负责订阅相关的操作...
+      DataSource.addChangeListener(this.handleChange);
+    }
+
+    componentWillUnmount() {
+      DataSource.removeChangeListener(this.handleChange);
+    }
+
+    handleChange() {
+      this.setState({
+        data: selectData(DataSource, this.props)
+      });
+    }
+
+    render() {
+      // ... 并使用新数据渲染被包装的组件!
+      // 请注意，我们可能还会传递其他属性
+      return <WrappedComponent data={this.state.data} {...this.props} />;
+    }
+  };
+}
+
+class LifeCycleDemo extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0 }
+    this.onClick = this.onClick.bind(this);
+    console.log("invoking constructor...");
+  }
+
+  static getDerivedStateFromProps() {
+    console.log("invoking getDerivedStateFromProps...");
+  }
+
+  componentDidMount() {
+    console.log("invoking componentDidMount...");
+  }
+
+  shouldComponentUpdate(preProps, preState) {
+    console.log(preProps, preState);
+    console.log("invoking shouldComponentUpdate...");
+    return preState.count !== this.state.count;
+  }
+
+  getSnapshotBeforeUpdate() {
+    console.log("invoking getSnapshotBeforeUpdate...");
+  }
+
+  componentDidUpdate() {
+    console.log("invoking componentDiUpdate...");
+  }
+
+  componentWillUnmount() {
+    console.log("invoking componentWillUnmount...");
+  }
+
+  render() {
+    console.log("invoking render...");
+    return (
+      <>
+        <h1>{this.props.title}</h1>
+        <button onClick={this.onClick}>{this.state.count}</button>
+      </>
     )
+  }
+
+  onClick() {
+    this.setState(({ count }) => ({ count: count + 1 }));
   }
 }
 
@@ -588,14 +849,25 @@ ReactDOM.render(
     <App4 />
     <App5 />
     <App6 />
-    <FragmentDemo items={[
-      { id: 0, term: "foo", definition: "foo is foo" },
-      { id: 1, term: "bar", definition: "bar is bar" }
-    ]} />
+    <FragmentDemo
+      items={[
+        { id: 0, term: "foo", definition: "foo is foo" },
+        { id: 1, term: "bar", definition: "bar is bar" },
+      ]}
+    />
     <ProfilerDemo />
+    <RefsDemo />
+    <RefsForwardDemo ref={React.createRef()}>
+      ref forward demo
+    </RefsForwardDemo>
+    <LifeCycleDemo title={"Life Cycle Demo"} />
+    <CommentList0 />
+    <BlogPost0 id={1} />
+    <CommentListWithSubScription />
+    <BlogPostWithSubscription id={2} />
   </div>,
-  document.getElementById('root')
-)
+  document.getElementById("root")
+);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

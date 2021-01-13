@@ -173,7 +173,7 @@ setInterval(tick, 1000);
 
 
 
-#### React 值更新需要更新的部分
+#### React 只更新需要更新的部分
 
 React DOM 会将元素和它的子元素与它们之前的状态进行比较, 并只会进行必要的更新来使 DOM 达到预期的状态
 
@@ -2332,11 +2332,161 @@ const Welcome = createReactClass({
 
 ---
 
+#### 设计动力
+
+在某一时间节点调用 `render` 方法生成由 React 元素组成的树. 下次 `state` 或 `props` 更新时, 相同的 `render` 方法返回一棵不同的树. React 需要基于这两棵树之间的差别判断如何高效更新 UI
+
+这个算法问题的通用解决方案为生成将一棵树转换成另一棵树的最小操作数. 但即使[最前沿的算法](http://grfia.dlsi.ua.es/ml/algorithms/references/editsurvey_bille.pdf)也需要 O(n^3^) 的时间复杂度.
+
+React 在以下两个假设的基础上提出一套 O(n) 的启发式算法 :
+
+* 不同类型的元素会产生不同的树
+* 可以通过 `key` 暗示哪些子元素在不同渲染下保持稳定
 
 
 
+#### Diffing 算法
 
-### Refs & DOM & Refs 转发
+对比两棵树时, React 先比较两棵树的根节点 : 
+
+* 对比不同类型的元素
+
+  React 将会拆卸原有树并建立新树, 例如元素从 `<a>` 变成 `<p>`. 拆卸一棵树时, 其对应 DOM 节点也会被销毁. 组件实例执行 `componentWillUnmount`. 建立一棵新树时, 对应的 DOM 节点被创建并插入 DOM 中. 组件实例执行 `componentWillMount`, 紧接着 `componentDidMount`. 所有跟之前树相关的 `state` 也会被销毁
+
+* 对比同类型元素
+
+  React 会保留 DOM 节点, 仅做属性改变. 对比完当前节点后, React 继续对子节点进行递归
+
+* 对比同类型的组件元素
+
+  当组件更新, 组件实例保持不变, 这样 `state` 在跨越不同的渲染时保持一致. React 将更新该组件实例的 `props` 以跟最新元素保持一致, 并调用该实例的 `componentWillReceiveProps` 和 `componentWillUpdate`. 最后调用 `render`, diff 算法将在之前的结果以及新的结果中递归
+
+* 对子节点进行递归
+
+  默认条件下, React 对比两个子元素列表, 当产生差异时生成一个 mutation.
+
+  在子元素列表末尾添加元素的更新开销较小, 而在头部插入元素开销大, 因为这会重建子元素列表的每个元素. 这时应该使用 `key` 解决
+
+* `key`
+
+  当子元素拥有 `key` 时, React 使用 `key` 来匹配原有树上的子元素以及最新树上的子元素. `key` 不需要全局唯一, 只需要在列表中唯一. 可以使用数组下标作为 `key`, 这个策略在元素不进行重排序时比较合适, 如果有顺序修改那么 diff 会变得很慢.
+
+  当基于下标的组件进行重新排序时, 组件 state 可能会遇到一些问题. 由于组件实例是基于它们的 key 来决定是否更新以及复用, 如果 key 是一个下标, 那么修改顺序时会修改当前的 key, 导致非受控组件的 state (比如输入框) 可能相互篡改导致无法预期的变动
+
+  ```jsx
+  const ToDo = props => (
+    <tr>
+      <td>
+        <label>{props.id}</label>
+      </td>
+      <td>
+        <input />
+      </td>
+      <td>
+        <label>{props.createdAt.toTimeString()}</label>
+      </td>
+    </tr>
+  );
+  
+  class ToDoList extends React.Component {
+    constructor() {
+      super();
+      const date = new Date();
+      const todoCounter = 1;
+      this.state = {
+        todoCounter: todoCounter,
+        list: [
+          {
+            id: todoCounter,
+            createdAt: date,
+          },
+        ],
+      };
+    }
+  
+    sortByEarliest() {
+      const sortedList = this.state.list.sort((a, b) => {
+        return a.createdAt - b.createdAt;
+      });
+      this.setState({
+        list: [...sortedList],
+      });
+    }
+  
+    sortByLatest() {
+      const sortedList = this.state.list.sort((a, b) => {
+        return b.createdAt - a.createdAt;
+      });
+      this.setState({
+        list: [...sortedList],
+      });
+    }
+  
+    addToEnd() {
+      const date = new Date();
+      const nextId = this.state.todoCounter + 1;
+      const newList = [
+        ...this.state.list,
+        {id: nextId, createdAt: date},
+      ];
+      this.setState({
+        list: newList,
+        todoCounter: nextId,
+      });
+    }
+  
+    addToStart() {
+      const date = new Date();
+      const nextId = this.state.todoCounter + 1;
+      const newList = [
+        {id: nextId, createdAt: date},
+        ...this.state.list,
+      ];
+      this.setState({
+        list: newList,
+        todoCounter: nextId,
+      });
+    }
+  
+    render() {
+      return (
+        <div>
+          <code>key=index</code>
+          <br />
+          <button onClick={this.addToStart.bind(this)}>
+            Add New to Start
+          </button>
+          <button onClick={this.addToEnd.bind(this)}>
+            Add New to End
+          </button>
+          <button onClick={this.sortByEarliest.bind(this)}>
+            Sort by Earliest
+          </button>
+          <button onClick={this.sortByLatest.bind(this)}>
+            Sort by Latest
+          </button>
+          <table>
+            <tr>
+              <th>ID</th>
+              <th />
+              <th>created at</th>
+            </tr>
+            {this.state.list.map((todo, index) => (
+              <ToDo key={index} {...todo} />
+            ))}
+          </table>
+        </div>
+      );
+    }
+  }
+  
+  ReactDOM.render(
+    <ToDoList />,
+    document.getElementById('root')
+  );
+  ```
+
+  在这个例子中, 如果我们不断执行 Add New to Start, 那么最早创建的 ToDo 将排列在最后面, 拥有 `key` 为 `len - 1`. 当执行 Sort by Earliest 时, 该 ToDo 项的内容并没有因为重新排列而跟随该 ToDo 项. 这是因为该 ToDo 项由于重排列, 其 `key` 由 `len - 1` 变成 `0`, 导致 React 更新结果不是我们想要的结果.
 
 
 
@@ -2360,9 +2510,514 @@ HOC 在 React 第三方库很常见, 例如 Redux 的 `connect`
 
 #### 使用 HOC 解决横切关注点问题
 
+```jsx
+const DataSource = {
+  comments: [
+    { id: 1, content: "comment1" },
+    { id: 2, content: "comment2" }
+  ],
+  blogPosts: [
+    { id: 1, content: "post1" },
+    { id: 2, content: "post2" }
+  ],
+  listeners: [],
+  getComment(id) {
+      return this.comments.find(comment => comment.id === id);
+  }
+  getComments() {
+    return this.comments
+  },
+  getBlogPost(id) {
+    return this.blogPosts.find(blogPost => blogPost.id === id);
+  },
+  getBlogPosts() {
+      return this.blogPosts;
+  },
+  addChangeListener(listener) {
+    this.listeners.push(listener);
+  },
+  removeChangeListener(listener) {
+    const { listeners } = this;
+    const i = listeners.indexOf(listener);
+    if (i !== -1) listeners.splice(i, 0);
+  },
+  onChange() {
+    this.listeners.forEach(listener => void listener());
+  }
+}
+
+class CommentList extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.state = {
+      // 假设 "DataSource" 是个全局范围内的数据源变量
+      comments: DataSource.getComments()
+    };
+  }
+
+  componentDidMount() {
+    // 订阅更改
+    DataSource.addChangeListener(this.handleChange);
+  }
+
+  componentWillUnmount() {
+    // 清除订阅
+    DataSource.removeChangeListener(this.handleChange);
+  }
+
+  handleChange() {
+    // 当数据源更新时，更新组件状态
+    this.setState({
+      comments: DataSource.getComments()
+    });
+  }
+
+  render() {
+    return (
+      <div>
+        {this.state.comments.map((comment) => (
+          <Comment comment={comment} key={comment.id} />
+        ))}
+      </div>
+    );
+  }
+}
+function Comment(props) {
+  return <div>{props.comment.content}</div>
+}
+
+class BlogPost extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.state = {
+      blogPost: DataSource.getBlogPost(props.id)
+    };
+  }
+
+  componentDidMount() {
+    DataSource.addChangeListener(this.handleChange);
+  }
+
+  componentWillUnmount() {
+    DataSource.removeChangeListener(this.handleChange);
+  }
+
+  handleChange() {
+    this.setState({
+      blogPost: DataSource.getBlogPost(this.props.id)
+    });
+  }
+
+  render() {
+    return <div>{this.state.blogPost.content}</div>;
+  }
+}
+```
+
+可以看到 `CommentList` 和 `BlogPost` 大部分实现相同 :
+
+* 挂载时, 向 `DataSource` 添加一个更改侦听器
+* 侦听器内部, 当数据源变化时, 调用 `setState`
+* 卸载时删除侦听器
+
+在大型项目中, 这种订阅 `DataSource` 和调用 `setState` 的模式不断发生. 我们需要抽象, 允许我们在一个地方定义这个逻辑, 并在多个组件间共享. 这是 HOC 所擅长的事情.
+
+对于订阅了 `DataSource` 的组件, 我们可以编写一个创建组件函数, 它接受子组件作为第一参数, 该子组件将订阅数据作为 prop : 
+
+```jsx
+class CommentList extends React.Component {
+  render() {
+    return (
+      <div>
+        {this.props.data.map(comment => (
+          <Comment comment={comment} key={comment.id} />
+        ))}
+      </div>
+    );
+  }
+}
+function Comment(props) {
+  return <div>{props.comment.content}</div>
+}
+
+class BlogPost extends React.Component {
+  render() {
+    return <div>{this.props.data.content}</div>;
+  }
+}
+
+const CommentListWithSubScription = withSubscription(
+    CommentList,
+    (DataSource) => DataSource.getComments()
+);
+
+const BlogPostWithSubscription = withSubscription(
+    BlogPost,
+    (DataSource, props) => DataSource.getBlogPost(props.id)
+);
+```
+
+```jsx
+// 此函数接收一个组件...
+function withSubscription(WrappedComponent, selectData) {
+  // ...并返回另一个组件...
+  return class extends React.Component {
+    constructor(props) {
+      super(props);
+      this.handleChange = this.handleChange.bind(this);
+      this.state = {
+        data: selectData(DataSource, props)
+      };
+    }
+
+    componentDidMount() {
+      // ...负责订阅相关的操作...
+      DataSource.addChangeListener(this.handleChange);
+    }
+
+    componentWillUnmount() {
+      DataSource.removeChangeListener(this.handleChange);
+    }
+
+    handleChange() {
+      this.setState({
+        data: selectData(DataSource, this.props)
+      });
+    }
+
+    render() {
+      // ... 并使用新数据渲染被包装的组件!
+      // 请注意，我们可能还会传递其他属性
+      return <WrappedComponent data={this.state.data} {...this.props} />;
+    }
+  };
+}
+```
+
+注意, HOC 不会修改传入组件, 也不会使用继承来复制其行为. HOC 通过将组件包装在容器组件中来形成辛祖教. HOC 是纯函数, 没有副作用
+
+被包装组件接收来自容器组件的所有 prop, 同时也接收一个新的用于 render 的 `data` prop. HOC 不需要关心数据的使用方式或原因, 而被包装组件也不需要关心数据是怎么来的
+
+
+
+#### 不要改变原始组件, 使用组合
+
+不要试图在 HOC 中修改组件原型 (或其他方式)
+
+```jsx
+function logProps(InputComponent) {
+  InputComponent.prototype.componentDidUpdate = function(prevProps) {
+    console.log('Current props: ', this.props);
+    console.log('Previous props: ', prevProps);
+  };
+  // 返回原始的 input 组件，暗示它已经被修改。
+  return InputComponent;
+}
+
+// 每次调用 logProps 时，增强组件都会有 log 输出。
+const EnhancedComponent = logProps(InputComponent);
+```
+
+HOC 不应该修改传入组件，而应该使用组合的方式，通过将组件包装在容器组件中实现功能：
+
+```jsx
+function logProps(WrappedComponent) {
+  return class extends React.Component {
+    componentDidUpdate(prevProps) {
+      console.log('Current props: ', this.props);
+      console.log('Previous props: ', prevProps);
+    }
+    render() {
+      // 将 input 组件包装在容器中，而不对其进行修改。Good!
+      return <WrappedComponent {...this.props} />;
+    }
+  }
+}
+```
+
+
+
+#### 约定 : 将不相关的 props 传递给被包裹的组件
+
+HOC 为组件添加特性。自身不应该大幅改变约定。HOC 返回的组件与原组件应保持类似的接口。
+
+HOC 应该透传与自身无关的 props。大多数 HOC 都应该包含一个类似于下面的 render 方法：
+
+```jsx
+render() {
+  // 过滤掉非此 HOC 额外的 props，且不要进行透传
+  const { extraProp, ...passThroughProps } = this.props;
+
+  // 将 props 注入到被包装的组件中。
+  // 通常为 state 的值或者实例方法。
+  const injectedProp = someStateOrInstanceMethod;
+
+  // 将 props 传递给被包装组件
+  return (
+    <WrappedComponent
+      injectedProp={injectedProp}
+      {...passThroughProps}
+    />
+  );
+}
+```
+
+这种约定保证了 HOC 的灵活性以及可复用性。
+
+
+
+#### TODO 约定 : 最大化可组合性
+
+
+
+#### 包装显示名称以便 Debug
+
+```jsx
+function withSubscription(WrappedComponent) {
+  class WithSubscription extends React.Component {/* ... */}
+  WithSubscription.displayName = `WithSubscription(${getDisplayName(WrappedComponent)})`;
+  return WithSubscription;
+}
+
+function getDisplayName(WrappedComponent) {
+  return WrappedComponent.displayName || WrappedComponent.name || 'Component';
+}
+```
+
+
+
+#### 注意事项
+
+* 不要在 `render` 中使用 HOC
+
+  React 的 diff 算法（称为[协调](https://zh-hans.reactjs.org/docs/reconciliation.html)）使用组件标识来确定它是应该更新现有子树还是将其丢弃并挂载新子树。 如果从 `render` 返回的组件与前一个渲染中的组件相同（`===`），则 React 通过将子树与新子树进行区分来递归更新子树。 如果它们不相等，则完全卸载前一个子树。
+
+  通常，你不需要考虑这点。但对 HOC 来说这一点很重要，因为这代表着你不应在组件的 render 方法中对一个组件应用 HOC：
+
+  ```jsx
+  render() {
+    // 每次调用 render 函数都会创建一个新的 EnhancedComponent
+    // EnhancedComponent1 !== EnhancedComponent2
+    const EnhancedComponent = enhance(MyComponent);
+    // 这将导致子树每次渲染都会进行卸载，和重新挂载的操作！
+    return <EnhancedComponent />;
+  }
+  ```
+
+  这不仅仅是性能问题 - 重新挂载组件会导致该组件及其所有子组件的状态丢失
+
+  如果在组件之外创建 HOC，这样一来组件只会创建一次。因此，每次 render 时都会是同一个组件。一般来说，这跟你的预期表现是一致的
+
+  ```jsx
+  const EnhancedComponent = enhance(MyComponent);
+  class ... {
+      render() {
+          return <EnhancedComponent />
+      }
+  }
+  ```
+
+* 务必复制静态方法
+
+  HOC 除非自己定义好, 否则静态方法不会被复制
+
+  ```jsx
+  // 定义静态函数
+  WrappedComponent.staticMethod = function() {/*...*/}
+  // 现在使用 HOC
+  const EnhancedComponent = enhance(WrappedComponent);
+  
+  // 增强组件没有 staticMethod
+  typeof EnhancedComponent.staticMethod === 'undefined' // true
+  ```
+
+  or
+
+  ```jsx
+  function enhance(WrappedComponent) {
+    class Enhance extends React.Component {/*...*/}
+    // 必须准确知道应该拷贝哪些方法 :(
+    Enhance.staticMethod = WrappedComponent.staticMethod;
+    return Enhance;
+  }
+  ```
+
+* ref 不会被传递 : 解决方案是通过 ref 转发
+
+
+
+### Refs & DOM & Refs 转发
+
+Refs 提供了一种方式, 允许我们访问 DOM 节点或在 render 方法中创建的 React 元素
+
+#### 何时使用
+
+几个适合 refs 的情况 : 
+
+* 焦点管理, 文本选择, 媒体播放
+* 触发强制动画
+* 集成第三方 DOM 库
+
+#### 创建 Refs
+
+Refs 是通过 `React.createRef` 函数创建的, 并通过 `ref` 属性附加到元素上. 在构造组件时, 通常将 Refs 分配给实例属性, 以便可以在整个组件引用它们.
+
+```jsx
+class MyComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.myRef = React.createRef();
+  }
+  render() {
+    return <div ref={this.myRef} />;
+  }
+}
+```
+
+
+
+#### 访问 Refs
+
+对节点的引用可以通过 ref 的 `current` 属性访问
+
+* `ref` 属性用于 HTML 元素时, `current` 为 DOM 元素
+* `ref` 属性用于 class 组件时, `current` 为组件的挂载实例
+
+
+
+#### Refs 与函数组件
+
+默认情况下, **不能**在函数组件上使用 `ref` 属性, 因为它们没有实例
+
+如果想要在函数组件中用 `ref`, 可以通过 refs 转发
+
+> 注意 : 函数组件不能用 `ref` 不代表其内部不能用 `ref`, 只要内部 `ref` 指向 DOM 元素或 class 组件
+
+
+
+#### 将 DOM Refs 暴露给父组件
+
+极少数情况下, 可能希望在父组件中引用子节点的 DOM 节点. 通常不建议这么做, 因为它打破组件的封装, 但可偶尔用于触发焦点或测量子 DOM 节点的大小或位置
+
+如果使用 React 16.3 及以上版本, 推荐使用 ref 转发. **Ref 转发使组件可以像暴露自己的 ref 一样暴露子组件的 ref**
+
+
+
+#### 回调 Refs
+
+是另一种设置 refs 的方式. 帮助我们更精细地控制 refs 何时被设置和解除.
+
+不同于传递由 `React.createRef` 创建的 ref, 我们传递一个函数. 这个函数接受 React 实例或 HTML DOM 元素为参数
+
+例如 : 
+
+```jsx
+class CustomTextInput extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.textInput = null;
+
+    this.setTextInputRef = element => {
+      this.textInput = element;
+    };
+
+    this.focusTextInput = () => {
+      // 使用原生 DOM API 使 text 输入框获得焦点
+      if (this.textInput) this.textInput.focus();
+    };
+  }
+
+  componentDidMount() {
+    // 组件挂载后，让文本框自动获得焦点
+    this.focusTextInput();
+  }
+
+  render() {
+    // 使用 `ref` 的回调函数将 text 输入框 DOM 节点的引用存储到 React
+    // 实例上（比如 this.textInput）
+    return (
+      <div>
+        <input
+          type="text"
+          ref={this.setTextInputRef}
+        />
+        <input
+          type="button"
+          value="Focus the text input"
+          onClick={this.focusTextInput}
+        />
+      </div>
+    );
+  }
+}
+```
+
+
+
+> 如果 `ref` 回调函数是以内联函数的方式定义的，在更新过程中它会被执行两次，第一次传入参数 `null`，然后第二次会传入参数 DOM 元素。这是因为在每次渲染时会创建一个新的函数实例，所以 React 清空旧的 ref 并且设置新的。通过将 ref 的回调函数定义成 class 的绑定函数的方式可以避免上述问题，但是大多数情况下它是无关紧要的
+
+
+
+#### Refs 转发
+
+Ref 转发是一项将 ref 自动通过组件传递到其一子组件的技巧.
+
+像封装的 Button 或者 Input 这样的高可复用"叶"组件, 在整个应用中以类似常规 DOM 的方式被使用的组件, 无可避免地会需要访问其 DOM 节点, 管理焦点, 选中或动画等.
+
+Ref 转发是可选特性, 它允许某些组件接受 ref 并将其向下传递 (换句话说, "转发" 它) 给子组件.
+
+例如 :
+
+```jsx
+const FancyButton = React.forwardRef((props, ref) => (
+  <button ref={ref} className="FancyButton">
+    {props.children}
+  </button>
+));
+
+// 你可以直接获取 DOM button 的 ref：
+const ref = React.createRef();
+<FancyButton ref={ref}>Click me!</FancyButton>;
+```
+
+这样在使用时组件可以获取底层 DOM 节点 button 的 `ref`, 并在必要时访问, 就像直接使用 DOM 的 button 一样
+
+上述代码的步骤为 : 
+
+1. 调用 `React.createRef` 创建 ref
+2. 传递 ref 给 `FancyButton`
+3. React 传递 ref 给 `forwardRef` 函数
+4. 向下转发 ref 到 button 上
+5. ref 挂在完成, `ref.current` 指向 button DOM 节点
+
+> 注意 :
+>
+> 第二个参数 `ref` 只在使用 `React.forwardRef` 定义组件时存在。常规函数和 class 组件不接收 `ref` 参数，且 props 中也不存在 `ref`。
+>
+> Ref 转发不仅限于 DOM 组件，你也可以转发 refs 到 class 组件实例中。
+
+
+
+> 注意 :
+>
+> 组件库的维护者如果使用了 `forwardRef`, 那么应该视为一个破坏性更改, 并发布库的一个新的主版本.
+
 
 
 ### Render Props
+
+"render prop" 指一种在 React 组件间使用一个值为函数的 prop 共享代码的技术
+
+具有 render prop 的组件接受一个返回 React 元素的函数, 并在内部通过调用该函数实现自己的渲染逻辑 (?那我为什么不用 children?)
+
+在这里我们讨论为什么它有用
+
+#### 解决横向关注点
+
+
 
 
 
